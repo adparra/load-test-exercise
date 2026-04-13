@@ -1,0 +1,120 @@
+PRUEBA DE CARGA - LOGIN SERVICE
+
+------------------------------------------------------------
+ENDPOINT BAJO PRUEBA
+------------------------------------------------------------
+
+URL    : https://fakestoreapi.com/auth/login
+Método : POST
+Body   : { "username": "<user>", "password": "<passwd>" }
+
+La API pertenece a un entorno público de pruebas (Fake Store API). Los usuarios parametrizados en el CSV corresponden a cuentas de prueba disponibles en dicha plataforma.
+
+------------------------------------------------------------
+DECISIONES DE DISEÑO
+------------------------------------------------------------
+
+Número de hilos (30)
+	Se calculó con la fórmula: Threads = TPS objetivo × Tiempo de
+	respuesta promedio esperado = 20 × 0.5 s = 10 hilos mínimos.
+	Se utilizaron 30 hilos como margen de seguridad.
+
+Ramp-up (30 segundos)
+	Un ramp-up gradual evita saturar el servidor con 30 conexiones
+	simultáneas desde el inicio. Permite que la prueba refleje un
+	arranque más cercano a condiciones reales.
+
+Duración (300 segundos)
+	Suficiente para una prueba de concepto. Ver sección
+	"Consideraciones para pruebas reales" más abajo.
+
+Constant Throughput Timer (1,260 muestras/min = 21 TPS)
+	JMeter mide el throughput del timer en muestras por minuto,
+	por lo que: 21 TPS × 60 = 1,260. Se configuró en 21 en lugar
+	de 20 para compensar el arrastre del ramp-up: durante los
+	reduce el promedio total. El margen del 5% asegura que el
+	throughput reportado supere los 20 TPS requeridos.
+
+CSV Data Set Config — Sharing Mode: All Threads
+	Todos los hilos comparten el mismo puntero en el CSV, lo que
+	garantiza que cada petición use credenciales distintas antes
+	de reciclar la lista. Esto distribuye la carga entre usuarios
+	de forma más representativa.
+
+Recycle on EOF: true / Stop Thread on EOF: false
+	Con 30 hilos y solo 5 usuarios en el CSV, el reciclado es
+	necesario para que la prueba no se detenga al agotar la lista.
+
+------------------------------------------------------------
+ASSERTIONS — DECISIONES
+------------------------------------------------------------
+
+Response Assertion (HTTP 201)
+	La API de Fake Store devuelve HTTP 201 Created (no 200 OK) al
+    	crear un token de sesión. Esto es comportamiento REST correcto
+    	para un POST que crea un recurso. La assertion se configuró en
+    	201 para reflejar la respuesta real de esta API. Siempre se debe
+	confirmar los códigos de respuesta, ya que los docs de fakestoreapi
+	mencionan un código 200 como respuesta de "Login successful" cuando 
+	en realidad se recibe un código 201
+    
+
+Duration Assertion (1,500 ms)
+	Establece el SLA de tiempo de respuesta. Cualquier petición que
+	supere 1.5 segundos se marca como fallida, lo que también impacta
+	el porcentaje de error total. Ambas métricas están vinculadas.
+
+JSON Path Assertion ($.token)
+	Valida que la respuesta contenga el campo token, confirmando que
+	el login fue exitoso a nivel de negocio, más allá del código HTTP.
+
+------------------------------------------------------------
+HALLAZGOS DE LA EJECUCIÓN
+------------------------------------------------------------
+
+Response Assertion: 200 vs 201
+	El assertion estaba configurado en HTTP 200, pero la API responde
+	con 201 Created. Esto causó un 100% de errores en los reportes a
+	pesar de que todas las peticiones fueron exitosas a nivel de red y
+	de negocio. La corrección fue cambiar el valor esperado a 201.
+
+Throughput observado: 19.47 TPS
+	Ligeramente por debajo del objetivo de 20 TPS debido al arrastre
+	del ramp-up sobre el promedio total. Se corrigió ajustando el
+	timer a 1,260 muestras/min y ampliando la duración a 300 segundos
+	(originalmente era de solo 120 segundos) para que la fase sostenida tenga mayor peso en el promedio.
+
+------------------------------------------------------------
+CONSIDERACIONES PARA PRUEBAS EN ENTORNOS REALES
+------------------------------------------------------------
+
+Duración de la prueba
+	300 segundos es adecuado para validar el script, pero insuficiente
+	para una prueba de carga real. Se recomienda un mínimo de 10-15
+	minutos para detectar degradación progresiva, memory leaks o
+	agotamiento de conexiones en el servidor.
+
+Think Time
+	Esta prueba no incluye tiempo de espera entre peticiones. En un
+	escenario real, los usuarios no realizan logins de forma continua.
+	Agregar un Uniform Random Timer (1,000-3,000 ms) haría la prueba
+	más representativa del comportamiento humano.
+
+Pruebas de estrés y soak
+	Una prueba de carga a 20 TPS valida el escenario nominal.
+	Para conocer el límite del sistema se recomienda:
+      		- Stress test: incrementar TPS hasta encontrar el punto de quiebre.
+      		- Soak test  : mantener carga nominal por varias horas para
+		detectar degradación lenta.
+
+Datos de prueba
+	Con solo 5 usuarios en el CSV, existe riesgo de que el servidor
+	o un caché de sesiones trate las peticiones repetidas de forma
+	diferente a usuarios únicos. En producción se recomienda un
+	volumen mayor de datos de prueba.
+
+Ejecución distribuida
+	Para pruebas que requieran cientos de TPS, JMeter en una sola
+	máquina puede convertirse en el cuello de botella. Se debe usar
+	el modo maestro-esclavo (remote testing) con múltiples agentes.
+
