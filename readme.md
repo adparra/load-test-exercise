@@ -99,4 +99,3 @@ Una vez abierto `index.html`, las secciones relevantes son:
 | Throughput | >= 20 TPS (columna "Throughput" en Statistics) |
 | Tiempo de respuesta | p95 <= 1,500 ms |
 | Tasa de error | < 3% |
-```
