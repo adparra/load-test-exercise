@@ -31,9 +31,8 @@ Duración (300 segundos)
 Constant Throughput Timer (1,260 muestras/min = 21 TPS)
 	JMeter mide el throughput del timer en muestras por minuto,
 	por lo que: 21 TPS × 60 = 1,260. Se configuró en 21 en lugar
-	de 20 para compensar el arrastre del ramp-up: durante los
-	reduce el promedio total. El margen del 5% asegura que el
-	throughput reportado supere los 20 TPS requeridos.
+	de 20 para compensar el arrastre del ramp-up. El margen del 5% 
+	asegura que el throughput reportado supere los 20 TPS requeridos.
 
 CSV Data Set Config — Sharing Mode: All Threads
 	Todos los hilos comparten el mismo puntero en el CSV, lo que
@@ -51,13 +50,11 @@ ASSERTIONS — DECISIONES
 
 Response Assertion (HTTP 201)
 	La API de Fake Store devuelve HTTP 201 Created (no 200 OK) al
-    	crear un token de sesión. Esto es comportamiento REST correcto
-    	para un POST que crea un recurso. La assertion se configuró en
-    	201 para reflejar la respuesta real de esta API. Siempre se debe
+    crear un token de sesión.La assertion se configuró en
+    201 para reflejar la respuesta real de esta API. Siempre se debe
 	confirmar los códigos de respuesta, ya que los docs de fakestoreapi
 	mencionan un código 200 como respuesta de "Login successful" cuando 
 	en realidad se recibe un código 201
-    
 
 Duration Assertion (1,500 ms)
 	Establece el SLA de tiempo de respuesta. Cualquier petición que
@@ -105,7 +102,7 @@ Pruebas de estrés y soak
 	Para conocer el límite del sistema se recomienda:
       		- Stress test: incrementar TPS hasta encontrar el punto de quiebre.
       		- Soak test  : mantener carga nominal por varias horas para
-		detectar degradación lenta.
+			detectar degradación lenta.
 
 Datos de prueba
 	Con solo 5 usuarios en el CSV, existe riesgo de que el servidor
